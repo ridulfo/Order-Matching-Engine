@@ -1,9 +1,9 @@
-from Order import Order, Side
+from Order import *
 from sortedcontainers import SortedList
-from typing import List
+from typing import List, Union
 from time import time
 from Trade import Trade
-from Order import OrderType
+
 
 class Orderbook(object):
 	"""
@@ -17,36 +17,45 @@ class Orderbook(object):
 		self.asks: SortedList[Order] = SortedList()
 		self.trades = []
 
-	def processOrder(self, incomingOrder: Order):
+	def processOrder(self, incomingOrder):
 		"""
 		Processes an order
 
 		Depending on the type of order the following can happen:
+		- Market Order
 		- Limit Order
 		- Cancel Order
 		"""
 
-		if incomingOrder.orderType == OrderType.CANCEL:
-			if incomingOrder.side == Side.BUY:
-				for order in self.bids:
-					if incomingOrder.order_id == order.order_id:
-						self.bids.discard(order)
-						break
-			else:
-				for order in self.asks:
-					if incomingOrder.order_id == order.order_id:
-						self.asks.discard(order)
-						break
-			return
+		if incomingOrder.__class__ == CancelOrder:
+			for order in self.bids:
+				if incomingOrder.order_id == order.order_id:
+					self.bids.discard(order)
+					break
 
+			for order in self.asks:
+				if incomingOrder.order_id == order.order_id:
+					self.asks.discard(order)
+					break
+			
+			return # Exiting process order
 
 		def whileClause():
+			"""
+			Determined whether to continue the while-loop
+			"""
 			if incomingOrder.side==Side.BUY:
-				return len(self.asks) > 0 and incomingOrder.price >= self.asks[0].price
+				if incomingOrder.__class__ == LimitOrder:
+					return len(self.asks) > 0 and incomingOrder.price >= self.asks[0].price # Limit order on the BUY side
+				elif incomingOrder.__class__ == MarketOrder:
+					return len(self.asks) > 0 # Market order on the BUY side
 			else:
-				return len(self.bids) > 0 and incomingOrder.price <= self.bids[0].price
+				if incomingOrder.__class__ == LimitOrder:
+					return len(self.bids) > 0 and incomingOrder.price <= self.bids[0].price # Limit order on the SELL side
+				elif incomingOrder.__class__ == MarketOrder:
+					return len(self.bids) > 0 # Market order on the SELL side
 
-		# while there are orders
+		# while there are orders and the orders requirements are matched
 		while whileClause():
 			bookOrder = None
 			if incomingOrder.side==Side.BUY:
@@ -54,25 +63,25 @@ class Orderbook(object):
 			else:
 				bookOrder = self.bids.pop(0)
 
-			if incomingOrder.RemainingToFill == bookOrder.RemainingToFill:  # if the same volume
-				volume = incomingOrder.RemainingToFill
-				incomingOrder.RemainingToFill -= volume
-				bookOrder.RemainingToFill -= volume
+			if incomingOrder.remainingToFill == bookOrder.remainingToFill:  # if the same volume
+				volume = incomingOrder.remainingToFill
+				incomingOrder.remainingToFill -= volume
+				bookOrder.remainingToFill -= volume
 				self.trades.append(Trade(
 					incomingOrder.side, bookOrder.price, volume, incomingOrder.order_id, bookOrder.order_id))
 				break
 
-			elif incomingOrder.RemainingToFill > bookOrder.RemainingToFill:  # incoming has greater volume
-				volume = bookOrder.RemainingToFill
-				incomingOrder.RemainingToFill -= volume
-				bookOrder.RemainingToFill -= volume
+			elif incomingOrder.remainingToFill > bookOrder.remainingToFill:  # incoming has greater volume
+				volume = bookOrder.remainingToFill
+				incomingOrder.remainingToFill -= volume
+				bookOrder.remainingToFill -= volume
 				self.trades.append(Trade(
 					incomingOrder.side, bookOrder.price, volume, incomingOrder.order_id, bookOrder.order_id))
 
-			elif incomingOrder.RemainingToFill < bookOrder.RemainingToFill:  # book has greater volume
-				volume = incomingOrder.RemainingToFill
-				incomingOrder.RemainingToFill -= volume
-				bookOrder.RemainingToFill -= volume
+			elif incomingOrder.remainingToFill < bookOrder.remainingToFill:  # book has greater volume
+				volume = incomingOrder.remainingToFill
+				incomingOrder.remainingToFill -= volume
+				bookOrder.remainingToFill -= volume
 				self.trades.append(Trade(
 					incomingOrder.side, bookOrder.price, volume, incomingOrder.order_id, bookOrder.order_id))
 
@@ -82,7 +91,7 @@ class Orderbook(object):
 					self.bids.add(bookOrder)
 				break
 
-		if incomingOrder.RemainingToFill > 0:
+		if incomingOrder.remainingToFill > 0 and incomingOrder.__class__ == LimitOrder:
 			if incomingOrder.side == Side.BUY:
 				self.bids.add(incomingOrder)
 			else:
@@ -107,3 +116,6 @@ class Orderbook(object):
 
 		lines.append("-"*20)
 		return "\n".join(lines)
+	
+	def __len__(self):
+		return len(self.asks) + len(self.bids)

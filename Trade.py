@@ -8,7 +8,7 @@ class Trade(object):
 
 	A trade object
 	"""
-	def __init__(self, incoming_side: Side, price: float, trade_size: int, incoming_order_id: str, book_order_id: str):
+	def __init__(self, incoming_side: Side, price: float, trade_size: int, incoming_order_id: int, book_order_id: int):
 		self.timestamp = int(1e6 * time())
 		self.side = incoming_side
 		self.price = price
