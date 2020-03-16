@@ -1,26 +1,17 @@
-import enum
 from Order import Order, Side
 from sortedcontainers import SortedList
 from typing import List
-
-def get_timestamp():
-	""" Microsecond timestamp """
-	return int(1e6 * time.time())
-
-
-class Trade(object):
-	def __init__(self, incoming_side: Side, price: float, trade_size: int, incoming_order_id: str, book_order_id: str):
-		self.side = incoming_side
-		self.price = price
-		self.size = trade_size
-		self.incoming_order_id = incoming_order_id
-		self.book_order_id = book_order_id
-
-	def __repr__(self):
-		return 'Executed: {0} {1} units at {2}'.format(self.side, self.size, self.price)
-
+from time import time
+from Trade import Trade
+from Order import OrderType
 
 class Orderbook(object):
+	"""
+	An orderbook.
+	-------------
+
+	It can store and process orders.
+	"""
 	def __init__(self):
 		self.bids: SortedList[Order] = SortedList()
 		self.asks: SortedList[Order] = SortedList()
@@ -28,9 +19,27 @@ class Orderbook(object):
 
 	def processOrder(self, incomingOrder: Order):
 		"""
-		Takes an order and tries to fill it with the orders on the market
-		1. For ev
+		Processes an order
+
+		Depending on the type of order the following can happen:
+		- Limit Order
+		- Cancel Order
 		"""
+
+		if incomingOrder.orderType == OrderType.CANCEL:
+			if incomingOrder.side == Side.BUY:
+				for order in self.bids:
+					if incomingOrder.order_id == order.order_id:
+						self.bids.discard(order)
+						break
+			else:
+				for order in self.asks:
+					if incomingOrder.order_id == order.order_id:
+						self.asks.discard(order)
+						break
+			return
+
+
 		def whileClause():
 			if incomingOrder.side==Side.BUY:
 				return len(self.asks) > 0 and incomingOrder.price >= self.asks[0].price
@@ -98,5 +107,3 @@ class Orderbook(object):
 
 		lines.append("-"*20)
 		return "\n".join(lines)
-
-
