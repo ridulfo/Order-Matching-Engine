@@ -1,6 +1,5 @@
-from Orderbook import Orderbook
-from Order import *
-from Trade import Trade
+from OrderMatchingEngine import Order, Orderbook
+
 from random import getrandbits, randint, random
 
 # Benchmark
