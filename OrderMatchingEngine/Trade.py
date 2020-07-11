@@ -1,4 +1,4 @@
-from Order import Side
+from OrderMatchingEngine.Order import *
 from time import time
 
 class Trade(object):
