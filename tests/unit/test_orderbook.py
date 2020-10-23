@@ -27,3 +27,15 @@ def testExecution():
     assert book.getBid() == None
     assert book.getAsk() == None
 
+def testExecution_marmooli():
+    book = Orderbook()
+    order = LimitOrder(0, Side.SELL, 5, 105)
+    book.processOrder(order)
+    order = LimitOrder(0, Side.SELL, 5, 106)
+    book.processOrder(order)
+    order = LimitOrder(0, Side.BUY, 1, 105)
+    trade = book.processOrder(order)
+    assert len(book) == 2
+    assert book.getBid() == None
+    assert book.getAsk() == 105
+    assert len(book.trades)==1
