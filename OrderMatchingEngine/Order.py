@@ -42,7 +42,10 @@ class LimitOrder(MarketOrder):
     
     def __lt__(self, other):
         if self.price != other.price:
-            return self.price > other.price
+            if self.side == Side.BUY:
+                return self.price > other.price
+            else:
+                return self.price < other.price
 
         elif self.time != other.time:
              return self.time < other.time
